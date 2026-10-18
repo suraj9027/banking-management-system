@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | NorthBank</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dashboard-page">
+    <div class="container-fluid">
+        <div class="row">
+            <aside class="col-lg-2 sidebar p-3">
+                <a class="brand-lockup" href="dashboard.html" aria-label="NorthBank home">
+                    <span class="brand-mark">N</span>
+                    <span>NorthBank</span>
+                </a>
+                <div class="sidebar-label">BANKING</div>
+                <nav class="sidebar-nav" aria-label="Main navigation">
+                    <a class="active" href="dashboard.html"><span class="nav-icon">D</span>Dashboard</a>
+                    <a href="accounts.html"><span class="nav-icon">A</span>Accounts</a>
+                    <a href="transactions.html"><span class="nav-icon">T</span>Transactions</a>
+                    <div class="sidebar-label sidebar-label-spaced">ACTIONS</div>
+                    <a href="deposit.html"><span class="nav-icon">+</span>Deposit</a>
+                    <a href="withdraw.html"><span class="nav-icon">-</span>Withdraw</a>
+                    <a href="transfer.html"><span class="nav-icon">↗</span>Transfer</a>
+                    <div class="sidebar-label sidebar-label-spaced">PREFERENCES</div>
+                    <a href="profile.html"><span class="nav-icon">P</span>Profile</a>
+                </nav>
+                <div class="sidebar-footer">
+                    <span class="online-dot"></span>
+                    <span>Secure banking</span>
+                </div>
+            </aside>
+
+            <main class="col-lg-10 dashboard-main">
+                <header class="topbar dashboard-topbar">
+                    <div>
+                        <div class="eyebrow">PERSONAL BANKING</div>
+                        <h1 class="page-heading">Dashboard</h1>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="user-chip">
+                            <span class="user-avatar" id="userInitials">U</span>
+                            <span id="userBadge" class="user-name"></span>
+                        </div>
+                        <button class="btn btn-logout" onclick="logoutUser()">Log out</button>
+                    </div>
+                </header>
+
+                <div id="dashboardAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                <section class="welcome-banner">
+                    <div class="welcome-copy">
+                        <div class="welcome-kicker"><span class="online-dot"></span> YOUR MONEY, IN ONE PLACE</div>
+                        <h2 id="welcomeHeading">Welcome back</h2>
+                        <p>Here’s what’s happening with your accounts.</p>
+                        <div class="welcome-actions">
+                            <a class="btn btn-light btn-lg" href="accounts.html">View my accounts <span aria-hidden="true">→</span></a>
+                            <span id="dashboardDate" class="welcome-date"></span>
+                        </div>
+                    </div>
+                    <div class="balance-preview">
+                        <div class="balance-label">TOTAL AVAILABLE BALANCE</div>
+                        <div id="totalBalance" class="balance-value">$0.00</div>
+                        <div class="balance-footnote"><span class="balance-dot"></span> Across all your accounts</div>
+                        <div class="banner-decoration" aria-hidden="true"></div>
+                    </div>
+                </section>
+
+                <section class="row g-3 dashboard-metrics" aria-label="Account summary">
+                    <div class="col-sm-6 col-xl-4">
+                        <article class="metric-card">
+                            <div class="metric-topline"><span class="metric-icon accounts-icon">A</span><span class="metric-caption">ACCOUNTS</span></div>
+                            <div id="activeAccounts" class="metric-value">0</div>
+                            <div class="metric-description">Active accounts</div>
+                        </article>
+                    </div>
+                    <div class="col-sm-6 col-xl-4">
+                        <article class="metric-card">
+                            <div class="metric-topline"><span class="metric-icon deposits-icon">↓</span><span class="metric-caption">MONEY IN</span></div>
+                            <div id="totalDeposits" class="metric-value">$0.00</div>
+                            <div class="metric-description">Total deposits</div>
+                        </article>
+                    </div>
+                    <div class="col-sm-6 col-xl-4">
+                        <article class="metric-card">
+                            <div class="metric-topline"><span class="metric-icon withdrawals-icon">↑</span><span class="metric-caption">MONEY OUT</span></div>
+                            <div id="totalWithdrawals" class="metric-value">$0.00</div>
+                            <div class="metric-description">Total withdrawals</div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="row g-3 dashboard-content-row">
+                    <div class="col-xl-8">
+                        <article class="page-card chart-card h-100">
+                            <div class="section-heading">
+                                <div>
+                                    <div class="eyebrow">CASH FLOW</div>
+                                    <h2>Income &amp; expenses</h2>
+                                </div>
+                                <span class="period-pill">Last 6 months</span>
+                            </div>
+                            <div class="chart-wrap">
+                                <canvas id="monthlyChart" aria-label="Monthly income and expense chart"></canvas>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="col-xl-4">
+                        <article class="page-card quick-actions-card h-100">
+                            <div class="eyebrow">GET THINGS DONE</div>
+                            <h2>Quick actions</h2>
+                            <p class="section-subtitle">Your everyday banking, just a click away.</p>
+                            <div class="quick-actions">
+                                <a href="deposit.html" class="quick-action">
+                                    <span class="quick-action-icon deposit-action">↓</span>
+                                    <span><strong>Deposit</strong><small>Add money to an account</small></span>
+                                    <span class="action-arrow">→</span>
+                                </a>
+                                <a href="withdraw.html" class="quick-action">
+                                    <span class="quick-action-icon withdraw-action">↑</span>
+                                    <span><strong>Withdraw</strong><small>Take money out</small></span>
+                                    <span class="action-arrow">→</span>
+                                </a>
+                                <a href="transfer.html" class="quick-action">
+                                    <span class="quick-action-icon transfer-action">↗</span>
+                                    <span><strong>Transfer</strong><small>Move money between accounts</small></span>
+                                    <span class="action-arrow">→</span>
+                                </a>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="page-card recent-card">
+                    <div class="section-heading">
+                        <div>
+                            <div class="eyebrow">YOUR LATEST ACTIVITY</div>
+                            <h2>Recent transactions</h2>
+                        </div>
+                        <a class="view-all-link" href="transactions.html">View all <span aria-hidden="true">→</span></a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle dashboard-table">
+                            <thead>
+                                <tr>
+                                    <th>TRANSACTION</th>
+                                    <th>REFERENCE</th>
+                                    <th>DATE</th>
+                                    <th class="text-end">AMOUNT</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentTransactionsBody">
+                                <tr><td colspan="4" class="table-loading">Loading your activity...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <footer class="dashboard-footer">NorthBank · Your finances, made clearer.</footer>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
