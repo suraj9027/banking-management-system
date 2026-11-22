@@ -35,8 +35,8 @@
                     <h5>Deposit funds</h5>
                     <form id="depositForm">
                         <div class="mb-3">
-                            <label class="form-label">Account ID</label>
-                            <input id="accountId" class="form-control" type="number" required>
+                            <label class="form-label" for="accountId">Account</label>
+                            <select id="accountId" class="form-select" required></select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Amount</label>
@@ -57,30 +57,43 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        requireAuth();
-        applyUserBadge();
-        document.getElementById('depositForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!requireAuth()) return;
+            applyUserBadge();
             const alert = document.getElementById('depositAlert');
-            const success = document.getElementById('depositSuccess');
             try {
-                const payload = {
-                    amount: Number(document.getElementById('amount').value),
-                    description: document.getElementById('description').value
-                };
-                await apiFetch(`/api/accounts/${document.getElementById('accountId').value}/deposit`, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-                success.classList.remove('d-none');
-                success.textContent = 'Deposit was processed successfully.';
-                alert.classList.add('d-none');
-                document.getElementById('depositForm').reset();
+                await populateOwnedAccountSelect('accountId');
             } catch (error) {
                 alert.classList.remove('d-none');
                 alert.textContent = error.message;
-                success.classList.add('d-none');
+                return;
             }
+            document.getElementById('depositForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const success = document.getElementById('depositSuccess');
+                const button = form.querySelector('button[type="submit"]');
+                button.disabled = true;
+                try {
+                    await apiFetch(`/api/accounts/${document.getElementById('accountId').value}/deposit`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            amount: document.getElementById('amount').value,
+                            description: document.getElementById('description').value
+                        })
+                    });
+                    success.classList.remove('d-none');
+                    success.textContent = 'Deposit was processed successfully.';
+                    alert.classList.add('d-none');
+                    form.reset();
+                } catch (error) {
+                    alert.classList.remove('d-none');
+                    alert.textContent = error.message;
+                    success.classList.add('d-none');
+                } finally {
+                    button.disabled = false;
+                }
+            });
         });
     </script>
 </body>

@@ -7,10 +7,14 @@ import com.example.banking.entity.Account;
 import com.example.banking.entity.AccountStatus;
 import com.example.banking.entity.AccountType;
 import com.example.banking.entity.Role;
+import com.example.banking.entity.Transaction;
+import com.example.banking.entity.TransactionStatus;
+import com.example.banking.entity.TransactionType;
 import com.example.banking.entity.User;
 import com.example.banking.exception.ResourceNotFoundException;
 import com.example.banking.exception.UnauthorizedAccessException;
 import com.example.banking.repository.AccountRepository;
+import com.example.banking.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,17 +26,20 @@ import java.util.UUID;
 @Service
 public class AccountService {
     private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
 
-    public AccountService(AccountRepository accountRepository) {
+    public AccountService(AccountRepository accountRepository, TransactionRepository transactionRepository) {
         this.accountRepository = accountRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     @Transactional
     public AccountDto createAccount(CreateAccountRequest request, User currentUser) {
         AccountType type = parseAccountType(request.accountType());
-        BigDecimal initialBalance = request.balance() == null ? BigDecimal.ZERO : request.balance();
-
-        if (initialBalance.compareTo(BigDecimal.ZERO) < 0) {
+        BigDecimal initialBalance = request.balance() == null
+                ? BigDecimal.ZERO.setScale(2)
+                : normalizeMoney(request.balance());
+        if (initialBalance.signum() < 0) {
             throw new IllegalArgumentException("Initial balance cannot be negative");
         }
 
@@ -44,6 +51,17 @@ public class AccountService {
         account.setUser(currentUser);
 
         Account saved = accountRepository.save(account);
+        if (initialBalance.signum() > 0) {
+            Transaction openingDeposit = new Transaction();
+            openingDeposit.setUser(currentUser);
+            openingDeposit.setType(TransactionType.DEPOSIT);
+            openingDeposit.setAmount(initialBalance);
+            openingDeposit.setDescription("Initial deposit");
+            openingDeposit.setReferenceNumber(generateReference());
+            openingDeposit.setStatus(TransactionStatus.SUCCESS);
+            openingDeposit.setTargetAccount(saved);
+            transactionRepository.save(openingDeposit);
+        }
         return toDto(saved);
     }
 
@@ -67,7 +85,7 @@ public class AccountService {
 
     @Transactional
     public AccountDto updateAccount(Long id, UpdateAccountRequest request, User currentUser) {
-        Account account = accountRepository.findById(id)
+        Account account = accountRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (currentUser.getRole() != Role.ADMIN && !account.getUser().getId().equals(currentUser.getId())) {
@@ -82,7 +100,14 @@ public class AccountService {
             account.setAccountType(parseAccountType(request.accountType()));
         }
         if (request.status() != null && !request.status().isBlank()) {
-            account.setStatus(parseStatus(request.status()));
+            AccountStatus requestedStatus = parseStatus(request.status());
+            if (requestedStatus == AccountStatus.CLOSED && account.getBalance().signum() > 0) {
+                throw new IllegalArgumentException("Account must have zero balance before closing");
+            }
+            if (account.getStatus() == AccountStatus.CLOSED && requestedStatus != AccountStatus.CLOSED) {
+                throw new IllegalArgumentException("A closed account cannot be reactivated");
+            }
+            account.setStatus(requestedStatus);
         }
 
         return toDto(accountRepository.save(account));
@@ -90,13 +115,13 @@ public class AccountService {
 
     @Transactional
     public void deleteAccount(Long id, User currentUser) {
-        Account account = accountRepository.findById(id)
+        Account account = accountRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (currentUser.getRole() != Role.ADMIN && !account.getUser().getId().equals(currentUser.getId())) {
             throw new UnauthorizedAccessException("You are not allowed to delete this account");
         }
-        if (account.getBalance().compareTo(BigDecimal.ZERO) > 0) {
+        if (account.getBalance().signum() > 0) {
             throw new IllegalArgumentException("Account must have zero balance before closing");
         }
 
@@ -104,12 +129,22 @@ public class AccountService {
         accountRepository.save(account);
     }
 
-    public boolean canAccessAccount(User currentUser, Account account) {
-        return currentUser.getRole() == Role.ADMIN || account.getUser().getId().equals(currentUser.getId());
-    }
-
     private String generateAccountNumber() {
         return "ACCT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+    }
+
+    private String generateReference() {
+        return "DEP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+    }
+
+    private BigDecimal normalizeMoney(BigDecimal value) {
+        if (value.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("Money values cannot have more than two decimal places");
+        }
+        if (value.precision() - value.scale() > 17) {
+            throw new IllegalArgumentException("Money value exceeds the supported account balance limit");
+        }
+        return value.setScale(2, RoundingMode.UNNECESSARY);
     }
 
     private AccountType parseAccountType(String value) {

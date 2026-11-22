@@ -45,7 +45,7 @@ public class AccountController {
     }
 
     @PutMapping("/{id}")
-    public AccountDto updateAccount(@PathVariable Long id, @RequestBody UpdateAccountRequest request) {
+    public AccountDto updateAccount(@PathVariable Long id, @Valid @RequestBody UpdateAccountRequest request) {
         return accountService.updateAccount(id, request, getCurrentUser());
     }
 
@@ -60,7 +60,7 @@ public class AccountController {
         if (auth == null || !auth.isAuthenticated()) {
             throw new ResourceNotFoundException("Authentication is required");
         }
-        return userRepository.findByUsername(auth.getName())
+        return userRepository.findByUsernameIgnoreCase(auth.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

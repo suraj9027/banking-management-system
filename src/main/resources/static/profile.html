@@ -37,15 +37,25 @@
                         <strong>Username:</strong> <span id="profileUsername"></span>
                     </div>
                     <div class="mb-3">
-                        <strong>Email:</strong> <span id="profileEmail"></span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Name:</strong> <span id="profileName"></span>
-                    </div>
-                    <div class="mb-3">
                         <strong>Role:</strong> <span id="profileRole"></span>
                     </div>
-                    <button class="btn btn-outline-danger" onclick="logoutUser()">Logout</button>
+                    <form id="profileForm">
+                        <div class="mb-3">
+                            <label class="form-label" for="profileEmail">Email</label>
+                            <input id="profileEmail" type="email" class="form-control" maxlength="150" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="profileFirstName">First name</label>
+                            <input id="profileFirstName" class="form-control" maxlength="100" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="profileLastName">Last name</label>
+                            <input id="profileLastName" class="form-control" maxlength="100" required>
+                        </div>
+                        <div id="profileAlert" class="alert alert-danger d-none" role="alert"></div>
+                        <div id="profileSuccess" class="alert alert-success d-none" role="status"></div>
+                        <button class="btn btn-primary" type="submit">Save changes</button>
+                    </form>
                 </div>
             </main>
         </div>
@@ -53,17 +63,52 @@
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        requireAuth();
-        applyUserBadge();
-        (async function() {
-            const user = await loadCurrentUser();
-            if (user) {
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!requireAuth()) return;
+            applyUserBadge();
+            const alert = document.getElementById('profileAlert');
+            try {
+                const user = await loadCurrentUser();
+                if (!user) return;
                 document.getElementById('profileUsername').textContent = user.username;
-                document.getElementById('profileEmail').textContent = user.email;
-                document.getElementById('profileName').textContent = `${user.firstName} ${user.lastName}`;
+                document.getElementById('profileEmail').value = user.email;
+                document.getElementById('profileFirstName').value = user.firstName;
+                document.getElementById('profileLastName').value = user.lastName;
                 document.getElementById('profileRole').textContent = user.role;
+            } catch (error) {
+                alert.classList.remove('d-none');
+                alert.textContent = error.message;
+                return;
             }
-        })();
+
+            document.getElementById('profileForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const button = event.currentTarget.querySelector('button[type="submit"]');
+                const success = document.getElementById('profileSuccess');
+                button.disabled = true;
+                try {
+                    const user = await apiFetch('/api/auth/me', {
+                        method: 'PUT',
+                        body: JSON.stringify({
+                            email: document.getElementById('profileEmail').value,
+                            firstName: document.getElementById('profileFirstName').value,
+                            lastName: document.getElementById('profileLastName').value
+                        })
+                    });
+                    saveUser(user);
+                    applyUserBadge();
+                    success.classList.remove('d-none');
+                    success.textContent = 'Profile updated successfully.';
+                    alert.classList.add('d-none');
+                } catch (error) {
+                    alert.classList.remove('d-none');
+                    alert.textContent = error.message;
+                    success.classList.add('d-none');
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
     </script>
 </body>
 </html>

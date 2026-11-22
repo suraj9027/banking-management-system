@@ -12,6 +12,7 @@ public record TransactionDto(
         String status,
         String sourceAccountNumber,
         String targetAccountNumber,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String direction
 ) {
 }

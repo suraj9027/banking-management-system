@@ -5,6 +5,7 @@ async function loginUser(username, password) {
     }, false);
 
     if (result && result.user) {
+        clearCsrfToken();
         saveUser(result.user);
         return result.user;
     }
@@ -23,15 +24,11 @@ async function loadCurrentUser() {
     if (!isAuthenticated()) {
         return null;
     }
-    try {
-        const user = await apiFetch("/api/auth/me");
-        if (user) {
-            saveUser(user);
-        }
-        return user;
-    } catch (error) {
-        return null;
+    const user = await apiFetch("/api/auth/me");
+    if (user) {
+        saveUser(user);
     }
+    return user;
 }
 
 function redirectIfLoggedIn() {

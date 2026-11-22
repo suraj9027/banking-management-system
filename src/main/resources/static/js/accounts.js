@@ -11,13 +11,13 @@ async function refreshAccounts() {
 
         tbody.innerHTML = accounts.map(account => `
             <tr>
-                <td>${account.accountNumber}</td>
-                <td>${account.accountType}</td>
-                <td>${account.status}</td>
+                <td>${escapeHtml(account.accountNumber)}</td>
+                <td>${escapeHtml(account.accountType)}</td>
+                <td>${escapeHtml(account.status)}</td>
                 <td>${formatCurrency(account.balance)}</td>
                 <td>${formatDate(account.createdAt)}</td>
                 <td>
-                    <a class="btn btn-sm btn-primary" href="account-details.html?id=${account.id}">View</a>
+                    <a class="btn btn-sm btn-primary" href="account-details.html?id=${encodeURIComponent(account.id)}">View</a>
                 </td>
             </tr>
         `).join("");

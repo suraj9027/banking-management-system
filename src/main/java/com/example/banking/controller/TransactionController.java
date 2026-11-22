@@ -57,7 +57,7 @@ public class TransactionController {
         if (auth == null || !auth.isAuthenticated()) {
             throw new ResourceNotFoundException("Authentication is required");
         }
-        return userRepository.findByUsername(auth.getName())
+        return userRepository.findByUsernameIgnoreCase(auth.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

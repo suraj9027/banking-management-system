@@ -12,6 +12,7 @@ import com.example.banking.repository.AccountRepository;
 import com.example.banking.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,6 +35,7 @@ public class DashboardService {
     public DashboardSummaryDto getSummary(User currentUser) {
         List<Account> accounts = accountRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId());
         BigDecimal totalBalance = accounts.stream()
+                .filter(account -> account.getStatus() == AccountStatus.ACTIVE)
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -53,13 +55,13 @@ public class DashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal monthlyIncome = transactions.stream()
-                .filter(transaction -> transaction.getType() == TransactionType.DEPOSIT)
+                .filter(transaction -> isIncoming(transaction, currentUser))
                 .filter(transaction -> transaction.getCreatedAt().isAfter(LocalDateTime.now().minusMonths(1)))
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal monthlyExpenses = transactions.stream()
-                .filter(transaction -> transaction.getType() == TransactionType.WITHDRAWAL)
+                .filter(transaction -> isOutgoing(transaction, currentUser))
                 .filter(transaction -> transaction.getCreatedAt().isAfter(LocalDateTime.now().minusMonths(1)))
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -83,9 +85,9 @@ public class DashboardService {
 
         for (Transaction transaction : transactions) {
             String monthKey = transaction.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM"));
-            if (transaction.getType() == TransactionType.DEPOSIT) {
+            if (isIncoming(transaction, currentUser)) {
                 incomeByMonth.merge(monthKey, transaction.getAmount(), BigDecimal::add);
-            } else if (transaction.getType() == TransactionType.WITHDRAWAL) {
+            } else if (isOutgoing(transaction, currentUser)) {
                 expenseByMonth.merge(monthKey, transaction.getAmount(), BigDecimal::add);
             }
         }
@@ -106,18 +108,40 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public List<TransactionDto> getRecentTransactions(User currentUser) {
-        return transactionRepository.findDashboardTransactions(currentUser.getId()).stream()
-                .limit(10)
-                .map(transaction -> new TransactionDto(
-                        transaction.getId(),
-                        transaction.getType().name(),
-                        transaction.getDescription(),
-                        transaction.getAmount(),
-                        transaction.getReferenceNumber(),
-                        transaction.getStatus().name(),
-                        transaction.getSourceAccount() == null ? null : transaction.getSourceAccount().getAccountNumber(),
-                        transaction.getTargetAccount() == null ? null : transaction.getTargetAccount().getAccountNumber(),
-                        transaction.getCreatedAt()))
+        return transactionRepository.findRecentDashboardTransactions(currentUser.getId(), PageRequest.of(0, 10)).stream()
+                .map(transaction -> toDto(transaction, currentUser))
                 .toList();
+    }
+
+    private TransactionDto toDto(Transaction transaction, User currentUser) {
+        return new TransactionDto(
+                transaction.getId(),
+                transaction.getType().name(),
+                transaction.getDescription(),
+                transaction.getAmount(),
+                transaction.getReferenceNumber(),
+                transaction.getStatus().name(),
+                transaction.getSourceAccount() == null ? null : transaction.getSourceAccount().getAccountNumber(),
+                transaction.getTargetAccount() == null ? null : transaction.getTargetAccount().getAccountNumber(),
+                transaction.getCreatedAt(),
+                isIncoming(transaction, currentUser) ? "INCOMING" : "OUTGOING");
+    }
+
+    private boolean isIncoming(Transaction transaction, User currentUser) {
+        if (transaction.getType() == TransactionType.DEPOSIT) {
+            return true;
+        }
+        return transaction.getType() == TransactionType.TRANSFER
+                && transaction.getTargetAccount() != null
+                && transaction.getTargetAccount().getUser().getId().equals(currentUser.getId());
+    }
+
+    private boolean isOutgoing(Transaction transaction, User currentUser) {
+        if (transaction.getType() == TransactionType.WITHDRAWAL) {
+            return true;
+        }
+        return transaction.getType() == TransactionType.TRANSFER
+                && transaction.getSourceAccount() != null
+                && transaction.getSourceAccount().getUser().getId().equals(currentUser.getId());
     }
 }

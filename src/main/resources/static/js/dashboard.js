@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <tr>
                     <td>
                         <div class="transaction-name">
-                            <span class="transaction-type-icon ${tx.type === "DEPOSIT" ? "incoming" : "outgoing"}">${tx.type === "DEPOSIT" ? "↓" : "↑"}</span>
+                            <span class="transaction-type-icon ${tx.direction === "INCOMING" ? "incoming" : "outgoing"}">${tx.direction === "INCOMING" ? "↓" : "↑"}</span>
                             <span>
                                 <span class="transaction-type-label">${escapeHtml(tx.type || "Transaction")}</span>
                                 <span class="transaction-description">${escapeHtml(tx.description || "-")}</span>
@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </td>
                     <td>${escapeHtml(tx.referenceNumber || "-")}</td>
                     <td>${escapeHtml(formatDate(tx.createdAt))}</td>
-                    <td class="text-end transaction-amount ${tx.type === "DEPOSIT" ? "incoming" : "outgoing"}">${tx.type === "DEPOSIT" ? "+" : "-"}${formatCurrency(tx.amount)}</td>
+                    <td class="text-end transaction-amount ${tx.direction === "INCOMING" ? "incoming" : "outgoing"}">${tx.direction === "INCOMING" ? "+" : "-"}${formatCurrency(tx.amount)}</td>
                 </tr>
             `).join("") : '<tr><td colspan="4" class="table-loading">No transactions yet. Your activity will appear here.</td></tr>';
         }
@@ -132,13 +132,3 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelector("#dashboardAlert").textContent = error.message;
     }
 });
-
-function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, character => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    })[character]);
-}
